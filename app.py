@@ -2,7 +2,7 @@
 
 from flask import Flask, request, render_template,  redirect, flash, session
 from flask_debugtoolbar import DebugToolbarExtension
-from models import db,  connect_db, USER
+from models import db,  connect_db, USER, Post
 
 app = Flask(__name__)
 
@@ -43,7 +43,8 @@ def create_user():
 def show_user(user_id):
     """Show details about a single user"""
     user = USER.query.get_or_404(user_id)
-    return render_template("detail.html", user=user)
+    posts = Post.query.filter(Post.user_id==user.id)
+    return render_template("detail.html", user=user, posts=posts)
 
 @app.route("/<int:user_id>/edit-user-form")
 def edit_user_form(user_id):
@@ -73,6 +74,67 @@ def delete_user(user_id):
     db.session.commit()
 
     return redirect('/')
+
+@app.route("/<int:user_id>/posts/new")
+def show_post_form(user_id):
+    """Show new post form"""
+    user = USER.query.get_or_404(user_id)
+    return render_template("new_post.html", user=user)
+
+@app.route("/<int:user_id>/posts/new", methods=["POST"])
+def add_new_post(user_id):
+    """Add new post"""
+    user = USER.query.get_or_404(user_id)
+    title = request.form["title"]
+    content = request.form["content"]
+
+    new_post  = Post(title=title, content=content, user_id=user.id)
+
+    db.session.add(new_post)
+    db.session.commit()
+
+    return redirect(f'/{user.id}')
+
+@app.route('/posts/<int:post_id>')
+def show_post(post_id):
+    """Show post"""
+
+    post=Post.query.get_or_404(post_id)
+
+    return render_template('show_post.html', post=post)
+
+@app.route("/posts/<int:post_id>/edit-post")
+def edit_post_form(post_id):
+    """Show edit post form"""
+    post = Post.query.get_or_404(post_id)
+    return render_template("edit_post.html", post=post)
+
+@app.route("/posts/<int:post_id>/edit-post", methods=["POST"])
+def edit_post(post_id):
+    """Edit an existing post"""
+    post = Post.query.get_or_404(post_id)
+    post.title = request.form["title"]
+    post.content = request.form["content"]
+
+    db.session.add(post)
+    db.session.commit()
+
+    return redirect(f'/{post.user.id}')
+
+@app.route("/posts/<int:post_id>/delete-post", methods=["POST"])
+def delete_post(post_id):
+    """Delete user post"""
+
+    post=Post.query.get_or_404(post_id)
+
+    db.session.delete(post)
+    db.session.commit()
+
+    return redirect('/')
+
+
+
+
 
 
 
